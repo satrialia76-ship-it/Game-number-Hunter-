@@ -1,0 +1,75 @@
+import random
+
+def main():
+    print("=" * 45)
+    print("       🎯 GAME NUMBER HUNTER 🎯       ")
+    print("=" * 45)
+    print("Selamat datang, Hunter! Tugasmu adalah menebak")
+    print("angka rahasia yang disembunyikan oleh sistem.\n")
+
+    # Pilih Tingkat Kesulitan
+    print("Pilih Tingkat Kesulitan:")
+    print("1. Mudah  (Rentang 1 - 50,  10 Kesempatan)")
+    print("2. Sedang (Rentang 1 - 100, 7 Kesempatan)")
+    print("3. Sulit  (Rentang 1 - 200, 5 Kesempatan)")
+    
+    pilihan = input("\nMasukkan pilihan (1/2/3): ").strip()
+    
+    if pilihan == '1':
+        max_angka = 50
+        kesempatan = 10
+    elif pilihan == '3':
+        max_angka = 200
+        kesempatan = 5
+    else:
+        max_angka = 100
+        kesempatan = 7
+
+    angka_rahasia = random.randint(1, max_angka)
+    skor_awal = 1000
+
+    print(f"\n[!] Angka rahasia telah dibuat di antara 1 - {max_angka}.")
+    print(f"[!] Kamu punya {kesempatan} kali kesempatan. Selamat berburu!\n")
+    print("-" * 45)
+
+    tebakan_ke = 1
+    berhasil = False
+
+    # Loop Game
+    while tebakan_ke <= kesempatan:
+        try:
+            sisa = kesempatan - tebakan_ke + 1
+            tebakan = int(input(f"Tebakan ke-{tebakan_ke} (Sisa kesempatan: {sisa}) ➡️  "))
+        except ValueError:
+            print("❌ Input tidak valid! Masukkan angka bulat.")
+            continue
+
+        if tebakan < 1 or tebakan > max_angka:
+            print(f"⚠️ Harap masukkan angka di dalam rentang 1 - {max_angka}!")
+            continue
+
+        if tebakan == angka_rahasia:
+            berhasil = True
+            break
+        elif tebakan < angka_rahasia:
+            print("💡 Petunjuk: Angka rahasia **LEBIH BESAR** 📈")
+        else:
+            print("💡 Petunjuk: Angka rahasia **LEBIH KECIL** 📉")
+        
+        tebakan_ke += 1
+        print("-" * 30)
+
+    # Hasil Akhir
+    print("\n" + "=" * 45)
+    if berhasil:
+        skor_akhir = max(100, skor_awal - ((tebakan_ke - 1) * 120))
+        print(f"🎉 SELAMAT! Kamu berhasil menemukan angka rahasia: {angka_rahasia}")
+        print(f"🏆 Tertebak dalam : {tebakan_ke} kali percobaan")
+        print(f"⭐ Skor Akhir     : {skor_akhir} Poin")
+    else:
+        print("💥 GAME OVER! Kesempatanmu telah habis.")
+        print(f"🔍 Angka rahasia yang benar adalah: {angka_rahasia}")
+    print("=" * 45)
+
+if __name__ == "__main__":
+    main()
