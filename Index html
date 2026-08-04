@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Hunter - Cyberpunk Arcade Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        orbitron: ['Orbitron', 'sans-serif'],
+                        rajdhani: ['Rajdhani', 'sans-serif'],
+                    },
+                    colors: {
+                        cyber: {
+                            bg: '#090a10',
+                            card: '#121526',
+                            accent: '#00f0ff',
+                            neonPink: '#ff0055',
+                            neonGreen: '#00ff66',
+                            neonYellow: '#ffe600',
+                            purple: '#7000ff'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background-color: #090a10;
+            color: #ffffff;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+
+        .glow-text-cyan {
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.7), 0 0 20px rgba(0, 240, 255, 0.4);
+        }
+        .glow-text-pink {
+            text-shadow: 0 0 10px rgba(255, 0, 85, 0.7), 0 0 20px rgba(255, 0, 85, 0.4);
+        }
+        .glow-box-cyan {
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3), inset 0 0 15px rgba(0, 240, 255, 0.15);
+        }
+        .glow-box-pink {
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.3), inset 0 0 15px rgba(255, 0, 85, 0.15);
+        }
+
+        .cyber-grid {
+            background-size: 40px 40px;
+            background-image: 
+                linear-gradient(to right, rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+        }
+
+        .target-node {
+            transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.2s, box-shadow 0.2s;
+        }
+        .target-node:active {
+            transform: scale(0.85);
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.03); }
+        }
+
+        .pulse-animation {
+            animation: pulseGlow 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen cyber-grid flex flex-col justify-between items-center relative overflow-hidden select-none">
+
+    <!-- Canvas background for interactive particles -->
+    <canvas id="bgCanvas" class="absolute inset-0 pointer-events-none z-0"></canvas>
+
+    <!-- Header / Navigation Bar -->
+    <header class="w-full max-w-4xl px-4 py-3 z-10 flex flex-wrap justify-between items-center border-b border-cyan-500/20 bg-cyber-card/80 backdrop-blur-md mt-2 rounded-2xl">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-purple-600 flex items-center justify-center font-orbitron font-black text-xl text-black shadow-lg shadow-cyan-500/30">
+                99
+            </div>
+            <div>
+                <h1 class="font-orbitron font-black text-xl md:text-2xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-pink-500">
+                    NUMBER HUNTER
+                </h1>
+                <p class="text-xs text-gray-400 tracking-widest font-mono">CYBER ARCADE V2.5</p>
+            </div>
+        </div>
+
+        <!-- High Score & Controls -->
+        <div class="flex items-center gap-4 mt-2 sm:mt-0">
+            <div class="bg-black/40 px-3 py-1.5 rounded-lg border border-cyan-500/30 text-right">
+                <span class="text-[10px] text-gray-400 block tracking-wider uppercase font-mono">High Score</span>
+                <span id="highScoreText" class="font-orbitron font-bold text-cyan-400 text-lg">0</span>
+            </div>
+            <button id="btnSettings" class="w-10 h-10 rounded-lg bg-gray-800/80 border border-gray-700 hover:border-cyan-400 flex items-center justify-center text-gray-300 hover:text-cyan-400 transition-all">
+                <i class="fas fa-cog"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Container -->
+    <main class="w-full max-w-4xl px-4 my-auto py-4 z-10 flex flex-col items-center">
+        
+        <!-- Game HUD Panel -->
+        <div class="w-full bg-cyber-card/90 border border-cyan-500/30 rounded-2xl p-4 mb-4 backdrop-blur-md shadow-2xl flex flex-wrap items-center justify-between gap-4">
+            
+            <!-- Target Mission Box -->
+            <div class="flex-1 min-w-[180px] bg-black/60 border border-pink-500/40 rounded-xl p-3 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                <div class="absolute -top-6 -right-6 w-16 h-16 bg-pink-500/10 rounded-full blur-xl"></div>
+                <span class="text-xs text-pink-400 font-mono tracking-wider font-semibold uppercase mb-1">🎯 TARGET HUNTER</span>
+                <div id="targetDisplay" class="font-orbitron font-black text-3xl md:text-4xl text-yellow-300 glow-text-pink pulse-animation">
+                    READY
+                </div>
+                <span id="targetHint" class="text-[11px] text-gray-400 mt-1 font-mono">Klik "Mulai" untuk berburu</span>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="flex gap-3 sm:gap-6 items-center justify-around flex-1">
+                <!-- Score -->
+                <div class="text-center">
+                    <span class="text-xs text-gray-400 font-mono block">SKOR</span>
+                    <span id="scoreText" class="font-orbitron font-bold text-2xl md:text-3xl text-cyan-400">0</span>
+                </div>
+                <!-- Combo Multiplier -->
+                <div class="text-center">
+                    <span class="text-xs text-gray-400 font-mono block">COMBO</span>
+                    <span id="comboText" class="font-orbitron font-bold text-2xl md:text-3xl text-purple-400">x1</span>
+                </div>
+                <!-- Timer -->
+                <div class="text-center">
+                    <span class="text-xs text-gray-400 font-mono block">SISA WAKTU</span>
+                    <span id="timerText" class="font-orbitron font-bold text-2xl md:text-3xl text-red-400">30s</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Arena Papan Permainan -->
+        <div id="gameArena" class="w-full h-[380px] sm:h-[420px] bg-black/80 border-2 border-cyan-500/40 rounded-2xl relative overflow-hidden shadow-2xl flex items-center justify-center">
+            
+            <!-- Grid Lines Visual Background -->
+            <div class="absolute inset-0 pointer-events-none opacity-20 bg-[radial-gradient(#00f0ff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+
+            <!-- Target Spawn Area -->
+            <div id="spawnArea" class="absolute inset-0 w-full h-full p-4 pointer-events-auto"></div>
+
+            <!-- Start / Game Over Overlay -->
+            <div id="gameOverlay" class="absolute inset-0 bg-black/90 backdrop-blur-md z-20 flex flex-col items-center justify-center p-6 text-center">
+                <div id="overlayIcon" class="w-20 h-20 rounded-full bg-cyan-500/10 border-2 border-cyan-400 flex items-center justify-center text-cyan-400 text-3xl mb-4 shadow-lg shadow-cyan-500/20">
+                    <i class="fas fa-crosshairs"></i>
+                </div>
+                <h2 id="overlayTitle" class="font-orbitron font-black text-3xl md:text-4xl text-cyan-400 tracking-wider mb-2">
+                    NUMBER HUNTER
+                </h2>
+                <p id="overlaySub" class="text-gray-300 max-w-md text-sm md:text-base mb-6 font-rajdhani">
+                    Buru angka target sesuai instruksi secepat mungkin! Makin tinggi combo, makin besar skor kamu.
+                </p>
+
+                <!-- Difficulty Selector -->
+                <div class="flex gap-2 mb-6">
+                    <button data-diff="easy" class="diff-btn px-4 py-1.5 rounded-lg border border-cyan-500/50 text-xs font-mono text-cyan-300 hover:bg-cyan-500/20 transition-all active">SANTAI</button>
+                    <button data-diff="normal" class="diff-btn px-4 py-1.5 rounded-lg border border-yellow-500/50 text-xs font-mono text-yellow-300 hover:bg-yellow-500/20 bg-yellow-500/20 transition-all">NORMAL</button>
+                    <button data-diff="hard" class="diff-btn px-4 py-1.5 rounded-lg border border-red-500/50 text-xs font-mono text-red-300 hover:bg-red-500/20 transition-all">EKSTREM</button>
+                </div>
+
+                <button id="btnStart" class="px-8 py-3 rounded-xl bg-gradient-to-r from-cyan-500 via-teal-400 to-pink-500 text-black font-orbitron font-black text-lg tracking-wider hover:opacity-90 transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-cyan-500/30">
+                    MULAI PERMAINAN
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Audio Control Bar & Music Player -->
+    <footer class="w-full max-w-4xl px-4 py-3 mb-2 z-10 bg-cyber-card/90 border border-cyan-500/20 rounded-2xl backdrop-blur-md flex flex-wrap items-center justify-between gap-3 shadow-xl">
+        
+        <!-- Track Details -->
+        <div class="flex items-center gap-3">
+            <button id="btnPlayMusic" class="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-600 to-pink-600 flex items-center justify-center text-white hover:scale-105 transition-all shadow-lg shadow-purple-500/30">
+                <i class="fas fa-play" id="playIcon"></i>
+            </button>
+            <div>
+                <div class="flex items-center gap-2">
+                    <span id="trackTitle" class="font-orbitron font-bold text-xs text-cyan-300 tracking-wide">Cyber Pulse Synthesizer</span>
+                    <span class="text-[10px] bg-pink-500/20 text-pink-300 px-1.5 py-0.5 rounded font-mono">SYNTH BGM</span>
+                </div>
+                <p id="trackArtist" class="text-[11px] text-gray-400">Web Audio Chiptune Engine</p>
+            </div>
+        </div>
+
+        <!-- Audio Visualizer Canvas -->
+        <div class="hidden sm:block flex-1 max-w-[200px] h-8 bg-black/50 border border-cyan-500/20 rounded-lg overflow-hidden px-1">
+            <canvas id="visualizerCanvas" class="w-full h-full"></canvas>
+        </div>
+
+        <!-- Music Controls -->
+        <div class="flex items-center gap-3">
+            <!-- Track Switcher -->
+            <button id="btnNextTrack" class="px-2.5 py-1 rounded bg-gray-800 border border-gray-700 text-xs text-gray-300 hover:text-cyan-400 flex items-center gap-1">
+                <i class="fas fa-step-forward text-[10px]"></i>
+                <span class="font-mono text-[11px]">Ganti Lagu</span>
+            </button>
+            
+            <!-- Mute SFX Toggle -->
+            <button id="btnToggleSFX" class="w-8 h-8 rounded-lg bg-gray-800/80 border border-gray-700 text-cyan-400 hover:bg-gray-700 flex items-center justify-center text-xs">
+                <i class="fas fa-volume-up" id="sfxIcon"></i>
+            </button>
+        </div>
+    </footer>
+
+    <script>
+        // ==========================================
+        // WEB AUDIO API SYNTHESIZER (NO EXTERNAL FILES)
+        // ==========================================
+        class AudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.isPlaying = false;
+                this.sfxMuted = false;
+                this.currentTrack = 0;
+                this.timerId = null;
+                this.noteStep = 0;
+                this.analyser = null;
+
+                // Track Presets (Frequensi Melodi & Bass Loop)
+                this.tracks = [
+                    {
+                        name: "Cyber Pulse Synth",
+                        tempo: 140,
+                        bass: [110, 110, 130.81, 110, 146.83, 130.81, 110, 98.00],
+                        lead: [220, 261.63, 329.63, 392.00, 329.63, 261.63, 293.66, 329.63]
+                    },
+                    {
+                        name: "8-Bit Retro Hunter",
+                        tempo: 160,
+                        bass: [130.81, 130.81, 164.81, 130.81, 174.61, 164.81, 130.81, 146.83],
+                        lead: [329.63, 392.00, 440.00, 523.25, 440.00, 392.00, 349.23, 329.63]
+                    },
+                    {
+                        name: "Neon Night Drive",
+                        tempo: 120,
+                        bass: [98.00, 98.00, 110.00, 98.00, 123.47, 110.00, 98.00, 87.31],
+                        lead: [196.00, 246.94, 293.66, 329.63, 293.66, 246.94, 220.00, 196.00]
+                    }
+                ];
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                    this.analyser = this.ctx.createAnalyser();
+                    this.analyser.fftSize = 32;
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playMusic() {
+                this.init();
+                if (this.isPlaying) return;
+                this.isPlaying = true;
+                const track = this.tracks[this.currentTrack];
+                const interval = (60 / track.tempo / 2) * 1000;
+
+                this.timerId = setInterval(() => {
+                    this.playSynthStep();
+                }, interval);
+            }
+
+            stopMusic() {
+                this.isPlaying = false;
+                if (this.timerId) clearInterval(this.timerId);
+            }
+
+            toggleMusic() {
+                if (this.isPlaying) {
+                    this.stopMusic();
+                } else {
+                    this.playMusic();
+                }
+                return this.isPlaying;
+            }
+
+            nextTrack() {
+                const wasPlaying = this.isPlaying;
+                this.stopMusic();
+                this.currentTrack = (this.currentTrack + 1) % this.tracks.length;
+                if (wasPlaying) {
+                    this.playMusic();
+                }
+                return this.tracks[this.currentTrack].name;
+            }
+
+            playSynthStep() {
+                if (!this.ctx || !this.isPlaying) return;
+
+                const track = this.tracks[this.currentTrack];
+                const t = this.ctx.currentTime;
+
+                // Bass Synthesizer
+                const bassOsc = this.ctx.createOscillator();
+                const bassGain = this.ctx.createGain();
+                bassOsc.type = 'sawtooth';
+                bassOsc.frequency.setValueAtTime(track.bass[this.noteStep % track.bass.length], t);
+                bassGain.gain.setValueAtTime(0.04, t);
+                bassGain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+                
+                bassOsc.connect(bassGain);
+                bassGain.connect(this.analyser);
+                this.analyser.connect(this.ctx.destination);
+                
+                bassOsc.start(t);
+                bassOsc.stop(t + 0.2);
+
+                // Lead Arpeggio Melody
+                if (this.noteStep % 2 === 0) {
+                    const leadOsc = this.ctx.createOscillator();
+                    const leadGain = this.ctx.createGain();
+                    leadOsc.type = 'square';
+                    leadOsc.frequency.setValueAtTime(track.lead[(this.noteStep / 2) % track.lead.length], t);
+                    leadGain.gain.setValueAtTime(0.02, t);
+                    leadGain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+
+                    leadOsc.connect(leadGain);
+                    leadGain.connect(this.analyser);
+                    
+                    leadOsc.start(t);
+                    leadOsc.stop(t + 0.18);
+                }
+
+                this.noteStep = (this.noteStep + 1) % 16;
+            }
+
+            // Sound Effects (SFX)
+            playHitSFX(isCorrect) {
+                if (this.sfxMuted) return;
+                this.init();
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                if (isCorrect) {
+                    // High Pitch Success Blip
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(587.33, t); // D5
+                    osc.frequency.exponentialRampToValueAtTime(880, t + 0.1); // A5
+                    gain.gain.setValueAtTime(0.15, t);
+                    gain.gain.linearRampToValueAtTime(0.01, t + 0.12);
+                } else {
+                    // Buzz Error Sound
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, t);
+                    osc.frequency.linearRampToValueAtTime(80, t + 0.15);
+                    gain.gain.setValueAtTime(0.2, t);
+                    gain.gain.linearRampToValueAtTime(0.01, t + 0.15);
+                }
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.15);
+            }
+
+            playGameOverSFX() {
+                if (this.sfxMuted) return;
+                this.init();
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, t);
+                osc.frequency.exponentialRampToValueAtTime(100, t + 0.5);
+                gain.gain.setValueAtTime(0.2, t);
+                gain.gain.linearRampToValueAtTime(0.01, t + 0.5);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.5);
+            }
+        }
+
+        // Instantiate AudioEngine globally before particles and visualizer start referencing it
+        const audio = new AudioEngine();
+
+        // ==========================================
+        // BACKGROUND PARTICLES & AUDIO VISUALIZER
+        // ==========================================
+        const bgCanvas = document.getElementById('bgCanvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        let bgParticles = [];
+
+        function resizeCanvas() {
+            bgCanvas.width = window.innerWidth;
+            bgCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * bgCanvas.width;
+                this.y = Math.random() * bgCanvas.height;
+                this.size = Math.random() * 2 + 1;
+                this.speedY = Math.random() * -1 - 0.2;
+                this.alpha = Math.random() * 0.5 + 0.2;
+            }
+            update() {
+                this.y += this.speedY;
+                if (this.y < 0) this.reset();
+            }
+            draw() {
+                bgCtx.fillStyle = `rgba(0, 240, 255, ${this.alpha})`;
+                bgCtx.beginPath();
+                bgCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                bgCtx.fill();
+            }
+        }
+
+        for (let i = 0; i < 40; i++) bgPartic
